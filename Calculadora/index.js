@@ -1,182 +1,82 @@
-//!Functions de operadores aritméticos
-const fatorial = n => (n <= 1 ? 1 : n * fatorial(n - 1))
+const resultado = document.getElementById('resultado');
+const historico = document.getElementById('historico');
+let expressao = '';
+let acabouDeCalcular = false;
 
-const somar = (a, b) => a + b
+function atualizar() {
+    resultado.textContent = expressao === '' ? '0' : expressao;
+}
 
-const multiplicar = (a, b) => a * b
+function fatorial(n) {
+    if (!Number.isInteger(n) || n < 0) throw new Error('Inválido');
+    if (n > 170) return Infinity;
+    let r = 1;
+    for (let i = 2; i <= n; i++) r *= i;
+    return r;
+}
 
-const dividir = (a, b) => a / b
-
-const subtracao= (a, b) => a - b
-
-
-let visorAtual = ""
-let primeiroNumero = 0
-let operador = null
-let resultadoMostrado = false
-let travarVisor = false
-
-document.getElementById('visor').value = primeiroNumero
-
-//! Só vai adicionar o segundo numero se o operador nao for fatorial
-function AdicionarNumero(num) {
-    if(!travarVisor){
-        visorAtual += num  //*Adiciona o número a váriavel que mais tarde sera atribuida ao visor
-        document.getElementById('visor').value = visorAtual
+function calcular() {
+    if (expressao === '') return;
+    try {
+        // Troca cada "número!" pelo fatorial correspondente
+        const comFatorial = expressao.replace(/(\d+)!/g, (_, n) => fatorial(Number(n)));
+        if (/!/.test(comFatorial) || /[^0-9+\-*/.e]/.test(comFatorial)) throw new Error('Inválido');
+        const valor = Function('"use strict"; return (' + comFatorial + ')')();
+        if (!isFinite(valor)) throw new Error('Inválido');
+        historico.textContent = expressao + ' =';
+        expressao = String(Math.round(valor * 1e10) / 1e10);
+        acabouDeCalcular = true;
+    } catch {
+        historico.textContent = expressao;
+        expressao = '';
+        resultado.textContent = 'Erro';
+        acabouDeCalcular = false;
+        return;
     }
+    atualizar();
 }
 
+function adicionar(valor) {
+    const ehOperador = ['+', '-', '*', '/'].includes(valor);
 
-function apagar() {
-    visorAtual = visorAtual.substring(0, visorAtual.length - 1) //*Pega o valor todo da variável com os números, menos o ultimo apagando-o
-    document.getElementById('visor').value = visorAtual //*Atualiza o valor do input com o novo valor da váriavel
-}
+    if (acabouDeCalcular) {
+        // Se digitar número, começa do zero; se operador, continua o resultado
+        if (!ehOperador && valor !== '!') expressao = '';
+        acabouDeCalcular = false;
+    }
 
-//*Adiciona um "ouvinte" para capturar quando qualquer tecla do teclado for pressionada
-document.addEventListener("keydown", function (e) {
-    //*Verifica se a tecla pressionada é Backspace
-    if (e.key === "Backspace" || e.key == 'Escape') {
-        e.preventDefault() // evita apagar o input todo
-        if(resultadoMostrado){
-            visorAtual = "" 
-            document.getElementById('visor').value = visorAtual
-            resultadoMostrado = !resultadoMostrado
-        }else{
-            apagar()
+    const ultimo = expressao.slice(-1);
+
+    if (valor === '!') {
+        if (!/\d/.test(ultimo)) return; // fatorial só depois de um número
+    }
+    if (ehOperador) {
+        if (expressao === '' && valor !== '-') return;
+        if (['+', '-', '*', '/'].includes(ultimo)) {
+            expressao = expressao.slice(0, -1); // troca o operador anterior
         }
-        return
     }
+    if (/\d/.test(valor) && ultimo === '!') return; // não permite 5!3
 
-    //*Verifica se a tecla que foi apertada é um botão do teclado númerico
-    if (!isNaN(e.key) && e.key !== " ") {
-        //! Chama a função adicionarNumero passando o número digitado
-        AdicionarNumero(e.key)
-        resultadoMostrado = !resultadoMostrado
-        return
-    }
-
-    if (e.key === "Enter" || e.key === "="){
-        igual()
-        e.preventDefault()
-        resultadoMostrado = true
-        return
-    }
-
-    if(["+", "-", "*", "/", "!"].includes(e.key)){
-        definirOperador(e.key)
-        resultadoMostrado = !resultadoMostrado
-        return
-    }
-
-})
-
-function definirOperador(op) {
-    primeiroNumero = Number(visorAtual) //*A váriavel captura o primeiro número adicionado ao visor quando o operador for selecionado
-    operador = op
-    
-    if(op == '!'){
-        travarVisor = true
-        visorAtual += '!'
-        
-    }else{
-        visorAtual = ""
-    }
-
-    if(!primeiroNumero && operador == '-'){
-        visorAtual += '-'
-    }else if(!primeiroNumero && operador == '+'){
-        visorAtual += '+'
-    }
-
-    if(resultadoMostrado){
-        travarVisor = !travarVisor
-    }
-
-    document.getElementById('visor').value = visorAtual
+    expressao += valor;
+    atualizar();
 }
 
-function igual() {
-    resultadoMostrado = true
-    let resultado
-    let segundoNumero = Number(visorAtual) //*A váriavel só capturara o segundo número quando o sinal de igual for clicado
+document.querySelector('.teclas').addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    const { valor, acao } = btn.dataset;
 
-    //!Espera a "escolha" do operador aritmético que o usuário vai selecionar
-    switch (operador) {
-        //!Chamada das funções para cada caso
-        case '+':
-            resultado = somar(primeiroNumero, segundoNumero)
-            break            
-        case '*':
-            resultado = multiplicar(primeiroNumero, segundoNumero)
-            break
-        case '/':
-            resultado = dividir(primeiroNumero, segundoNumero)
-            break
-        case '-':
-            if(!primeiroNumero && segundoNumero < 0){
-                resultado = somar(0, segundoNumero)
-                operador = '+'
-            }else{
-                resultado = subtracao(primeiroNumero, segundoNumero)
-            }
-            break
-        case '!':
-            resultado = fatorial(primeiroNumero)
-            visorAtual = resultado
-            document.getElementById('visor').value = `${primeiroNumero}! = ${resultado}`
-            break
-        default:
-            resultado = "Erro"
-    }
+    if (valor) adicionar(valor);
+    else if (acao === 'igual') calcular();
+    else if (acao === 'limpar') { expressao = ''; historico.textContent = ''; atualizar(); }
+    else if (acao === 'apagar') { expressao = expressao.slice(0, -1); atualizar(); }
+});
 
-    travarVisor = false
-
-    //Só vai executar se o operador nao for o fatorial
-    if(operador != '!'){
-        visorAtual = resultado
-        document.getElementById('visor').value = `${primeiroNumero} ${operador} ${segundoNumero} = ${resultado}`//*Exibe no visor a conta completa
-    }
-}
-
-
-/**
-*                                                  ,-.
-*                                               ("O_)
-*                                              / `-/
-*                                             /-. /
-*                                            /   )
-*                                           /   /  
-*                              _           /-. /
-*                             (_)"-._     /   )
-*                               "-._ "-'""( )/    
-*                                   "-/"-._" `. 
-*                                    /     "-.'._
-*                                   /\       /-._"-._
-*                    _,---...__    /  ) _,-"/    "-(_)
-*                ___<__(|) _   ""-/  / /   /
-*                 '  `----' ""-.   \/ /   /
-*                               )  ] /   /
-*                       ____..-'   //   /                       )
-*                   ,-""      __.,'/   /   ___                 /,
-*                  /    ,--""/  / /   /,-""   """-.          ,'/
-*                 [    (    /  / /   /  ,.---,_   `._   _,-','
-*                  \    `-./  / /   /  /       `-._  """ ,-'
-*                   `-._  /  / /   /_,'            ""--"
-*                       "/  / /   /"         
-*                       /  / /   /
-*                      /  / /   /  o!O
-*                     /  |,'   /  
-*                    :   /    /
-*                    [  /   ,'   "Blackadder"
-*                    | /  ,'
-*                    |/,-'
-*                    P'  ____   _                                     
-*   / __ \ (_) ___   __ _  ___  ___ _ ____      __
-*  / / _` || |/ _ \ / _` |/ _ \/ __| '_ \ \ /\ / /
-* | | (_| || | (_) | (_| | (_) \__ \ |_) \ V  V / 
-*  \ \__,_|/ |\___/ \__,_|\___/|___/ .__/ \_/\_/  
-*   \____/__/                      |_|          
-*                  @ j o a o s p w
-*/
-                   
-
+// Suporte ao teclado
+document.addEventListener('keydown', (e) => {
+    if (/^[0-9]$/.test(e.key) || ['+', '-', '*', '/', '!'].includes(e.key)) adicionar(e.key);
+    else if (e.key === 'Enter' || e.key === '=') { e.preventDefault(); calcular(); }
+    else if (e.key === 'Backspace') { expressao = expressao.slice(0, -1); atualizar(); }
+    else if (e.key === 'Escape') { expressao = ''; historico.textContent = ''; atualizar(); }
+});
